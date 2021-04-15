@@ -6,6 +6,7 @@ namespace Workerman\Gateway\Gateway;
 
 use GatewayWorker\Protocols\GatewayProtocol;
 use Workerman\Gateway\Config\GatewayWorkerConfig;
+use Workerman\Gateway\Exception\ConnectionException;
 use Workerman\Gateway\Gateway\Contract\IGatewayClient;
 use Workerman\Gateway\Register\Contract\IRegisterClient;
 
@@ -42,6 +43,11 @@ class GatewayWorkerClient
     protected $gatewayAddresses = [];
 
     /**
+     * @var float
+     */
+    protected $lastPingTime = 0;
+
+    /**
      * @var callable|null
      */
     public $onException;
@@ -71,19 +77,23 @@ class GatewayWorkerClient
     {
         $config = $this->config;
         $class = $config->getRegister();
-        $registerAddress = $config->getRegisterAddress();
-        if (!$registerAddress)
-        {
-            throw new \RuntimeException('RegisterAddress cannot be empty');
-        }
-        foreach ($registerAddress as $address)
+        foreach ($config->getRegisterAddress() as $address)
         {
             [$host, $port] = explode(':', $address, 2);
             /** @var IRegisterClient $client */
-            $client = new $class($host, (int) $port);
-            $client->connect();
-            $client->workerConnect();
-            $this->registerClients[$address] = $client;
+            $client = $this->registerClients[$address] = new $class($host, (int) $port);
+            try
+            {
+                $client->connect();
+                $client->workerConnect();
+            }
+            catch (ConnectionException $ce)
+            {
+            }
+            catch (\Throwable $th)
+            {
+                $this->onException($th);
+            }
         }
     }
 
@@ -107,7 +117,6 @@ class GatewayWorkerClient
                     $gatewayAddresses[$addr] = $addr;
                 }
                 $this->gatewayAddresses = $gatewayAddresses;
-                // $this->checkGatewayConnections($addresses);
                 foreach ($this->gatewayClients as $key => $client)
                 {
                     if (!isset($gatewayAddresses[$key]))
@@ -135,6 +144,9 @@ class GatewayWorkerClient
                                 'secret_key' => $config->getSecretKey(),
                             ]);
                             $client->send($data);
+                        }
+                        catch (ConnectionException $ce)
+                        {
                         }
                         catch (\Throwable $th)
                         {
@@ -170,6 +182,9 @@ class GatewayWorkerClient
                     $client->close();
                     $client->connect();
                 }
+            }
+            catch (ConnectionException $ce)
+            {
             }
             catch (\Throwable $th)
             {
@@ -215,6 +230,9 @@ class GatewayWorkerClient
                     $client->connect();
                 }
             }
+            catch (ConnectionException $ce)
+            {
+            }
             catch (\Throwable $th)
             {
                 $this->onException($th);
@@ -232,6 +250,28 @@ class GatewayWorkerClient
 
     protected function parsePing(): void
     {
+        $time = microtime(true);
+        if ($time - $this->lastPingTime > $this->config->getPingInternal())
+        {
+            foreach ($this->registerClients as $client)
+            {
+                try
+                {
+                    if ($client->isConnected())
+                    {
+                        $client->ping();
+                    }
+                }
+                catch (ConnectionException $ce)
+                {
+                }
+                catch (\Throwable $th)
+                {
+                    $this->onException($th);
+                }
+            }
+            $this->lastPingTime = $time;
+        }
     }
 
     public function run(): void
@@ -245,6 +285,9 @@ class GatewayWorkerClient
                 $this->recvRegisterClient();
                 $this->recvGatewayClients();
                 $this->parsePing();
+            }
+            catch (ConnectionException $ce)
+            {
             }
             catch (\Throwable $th)
             {

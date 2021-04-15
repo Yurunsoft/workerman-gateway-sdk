@@ -11,7 +11,7 @@ $config->setRegisterAddress('127.0.0.1:1238');
 
 $client = new GatewayWorkerClient(mt_rand(), $config);
 $client->onException = function (Throwable $th) {
-    var_dump($th->getMessage());
+    var_dump($th->getMessage(), $th->getTraceAsString());
 };
 $client->onGatewayMessage = function (IGatewayClient $client, array $message) {
     var_dump($message);

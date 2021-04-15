@@ -60,7 +60,7 @@ class StreamSocket implements ISocket
     public function connect(): void
     {
         $uri = sprintf('tcp://%s:%s', $this->host, $this->port);
-        $socket = stream_socket_client(
+        $socket = @stream_socket_client(
             $uri,
             $errno,
             $errstr,
