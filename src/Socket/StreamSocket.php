@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Workerman\Gateway\Client\Socket;
+namespace Workerman\Gateway\Socket;
 
-use Workerman\Gateway\Client\Config\SocketConfig;
-use Workerman\Gateway\Client\Exception\ConnectionException;
-use Workerman\Gateway\Client\Exception\SocketException;
+use Workerman\Gateway\Config\SocketConfig;
+use Workerman\Gateway\Exception\ConnectionException;
+use Workerman\Gateway\Exception\SocketException;
 
 class StreamSocket implements ISocket
 {
@@ -248,10 +248,52 @@ class StreamSocket implements ISocket
         }
         if (false === $data || 0 === \strlen($data))
         {
+            // Zero bytes because of EOF?
+            if (feof($this->socket))
+            {
+                $this->close();
+                throw new SocketException(sprintf('Unexpected EOF while reading %d bytes from stream (no data)', $length));
+            }
             throw new SocketException('Recv line failed');
         }
 
         return $data;
+    }
+
+    /**
+     * @param mixed $result
+     */
+    public function isReceiveable(?float $timeout = null, &$result = null): bool
+    {
+        if (!$this->isConnected())
+        {
+            return false;
+        }
+        if (null === $timeout)
+        {
+            $timeout = $this->config->getRecvTimeout();
+        }
+        $result = $this->select([$this->socket], $timeout, true);
+
+        return $result > 0;
+    }
+
+    /**
+     * @param mixed $result
+     */
+    public function isWriteable(?float $timeout = null, &$result = null): bool
+    {
+        if (!$this->isConnected())
+        {
+            return false;
+        }
+        if (null === $timeout)
+        {
+            $timeout = $this->config->getSendTimeout();
+        }
+        $result = $this->select([$this->socket], $timeout, false);
+
+        return $result > 0;
     }
 
     /**

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Workerman\Gateway\Client\Config;
+namespace Workerman\Gateway\Config;
 
 class SocketConfig
 {

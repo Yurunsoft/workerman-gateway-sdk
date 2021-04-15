@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Workerman\Gateway\Client\Gateway;
+namespace Workerman\Gateway\Gateway;
 
 use GatewayWorker\Protocols\GatewayProtocol;
-use Workerman\Gateway\Client\Config\GatewayClientConfig;
-use Workerman\Gateway\Client\Gateway\Contract\IGatewayClient;
-use Workerman\Gateway\Client\Socket\ISocket;
+use Workerman\Gateway\Config\GatewayClientConfig;
+use Workerman\Gateway\Gateway\Contract\IGatewayClient;
+use Workerman\Gateway\Socket\ISocket;
 
 class GatewayClient implements IGatewayClient
 {
@@ -79,7 +79,15 @@ class GatewayClient implements IGatewayClient
     {
         $timeout = ($timeout ?? $this->config->getRecvTimeout());
         $head = $this->socket->recv(GatewayProtocol::HEAD_LEN, $timeout);
-        $body = $this->socket->recv(GatewayProtocol::input($head), $timeout);
+        $messageLength = GatewayProtocol::input($head);
+        if ($messageLength > GatewayProtocol::HEAD_LEN)
+        {
+            $body = $this->socket->recv(GatewayProtocol::input($head) - GatewayProtocol::HEAD_LEN, $timeout);
+        }
+        else
+        {
+            $body = '';
+        }
 
         return GatewayProtocol::decode($head . $body);
     }
@@ -89,5 +97,26 @@ class GatewayClient implements IGatewayClient
         $this->send($data, $timeout);
 
         return $this->recv($timeout);
+    }
+
+    public function isConnected(): bool
+    {
+        return $this->socket->isConnected();
+    }
+
+    /**
+     * @param mixed $result
+     */
+    public function isReceiveable(?float $timeout = null, &$result = null): bool
+    {
+        return $this->socket->isReceiveable($timeout, $result);
+    }
+
+    /**
+     * @param mixed $result
+     */
+    public function isWriteable(?float $timeout = null, &$result = null): bool
+    {
+        return $this->socket->isWriteable($timeout, $result);
     }
 }

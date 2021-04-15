@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Workerman\Gateway\Client\Config;
+namespace Workerman\Gateway\Config;
 
-use Workerman\Gateway\Client\Socket\StreamSocket;
+use Workerman\Gateway\Socket\StreamSocket;
 
 class RegisterClientConfig extends SocketConfig
 {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Workerman\Gateway\Client\Socket;
+namespace Workerman\Gateway\Socket;
 
-use Workerman\Gateway\Client\Config\SocketConfig;
+use Workerman\Gateway\Config\SocketConfig;
 
 interface ISocket
 {
@@ -27,4 +27,14 @@ interface ISocket
     public function recv(int $length, ?float $timeout = null): string;
 
     public function recvLine(?int $length = null, ?float $timeout = null): string;
+
+    /**
+     * @param mixed $result
+     */
+    public function isReceiveable(?float $timeout = null, &$result = null): bool;
+
+    /**
+     * @param mixed $result
+     */
+    public function isWriteable(?float $timeout = null, &$result = null): bool;
 }

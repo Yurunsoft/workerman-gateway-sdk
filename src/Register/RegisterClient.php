@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Workerman\Gateway\Client\Register;
+namespace Workerman\Gateway\Register;
 
-use Workerman\Gateway\Client\Config\RegisterClientConfig;
-use Workerman\Gateway\Client\Exception\InvalidResponseException;
-use Workerman\Gateway\Client\Register\Contract\IRegisterClient;
-use Workerman\Gateway\Client\Socket\ISocket;
+use Workerman\Gateway\Config\RegisterClientConfig;
+use Workerman\Gateway\Exception\InvalidResponseException;
+use Workerman\Gateway\Register\Contract\IRegisterClient;
+use Workerman\Gateway\Socket\ISocket;
 
 class RegisterClient implements IRegisterClient
 {
@@ -85,6 +85,27 @@ class RegisterClient implements IRegisterClient
         return json_decode($data, true);
     }
 
+    public function isConnected(): bool
+    {
+        return $this->socket->isConnected();
+    }
+
+    /**
+     * @param mixed $result
+     */
+    public function isReceiveable(?float $timeout = null, &$result = null): bool
+    {
+        return $this->socket->isReceiveable($timeout, $result);
+    }
+
+    /**
+     * @param mixed $result
+     */
+    public function isWriteable(?float $timeout = null, &$result = null): bool
+    {
+        return $this->socket->isWriteable($timeout, $result);
+    }
+
     public function ping(): void
     {
         $this->send('ping');
@@ -101,5 +122,10 @@ class RegisterClient implements IRegisterClient
         }
 
         return $addresses;
+    }
+
+    public function workerConnect(): void
+    {
+        $this->send('worker_connect');
     }
 }

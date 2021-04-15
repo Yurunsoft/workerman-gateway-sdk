@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Workerman\Gateway\Client\Register\Contract;
+namespace Workerman\Gateway\Register\Contract;
 
-use Workerman\Gateway\Client\Config\RegisterClientConfig;
-use Workerman\Gateway\Client\Socket\ISocket;
+use Workerman\Gateway\Config\RegisterClientConfig;
+use Workerman\Gateway\Socket\ISocket;
 
 interface IRegisterClient
 {
@@ -14,6 +14,8 @@ interface IRegisterClient
     public function getPort(): int;
 
     public function getConfig(): RegisterClientConfig;
+
+    public function isConnected(): bool;
 
     public function getSocket(): ISocket;
 
@@ -25,7 +27,19 @@ interface IRegisterClient
 
     public function recv(?float $timeout = null): array;
 
+    /**
+     * @param mixed $result
+     */
+    public function isReceiveable(?float $timeout = null, &$result = null): bool;
+
+    /**
+     * @param mixed $result
+     */
+    public function isWriteable(?float $timeout = null, &$result = null): bool;
+
     public function ping(): void;
 
     public function getAllGatewayAddresses(): array;
+
+    public function workerConnect(): void;
 }

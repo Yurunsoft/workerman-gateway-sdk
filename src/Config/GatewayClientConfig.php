@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Workerman\Gateway\Client\Config;
+namespace Workerman\Gateway\Config;
 
-use Workerman\Gateway\Client\Gateway\GatewayClient;
-use Workerman\Gateway\Client\Register\RegisterClient;
-use Workerman\Gateway\Client\Socket\StreamSocket;
+use Workerman\Gateway\Gateway\GatewayClient;
+use Workerman\Gateway\Register\RegisterClient;
+use Workerman\Gateway\Socket\StreamSocket;
 
 class GatewayClientConfig extends SocketConfig
 {

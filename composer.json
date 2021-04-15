@@ -1,5 +1,6 @@
 {
-    "name": "yurunsoft/workerman-gateway-client",
+    "name": "yurunsoft/workerman-gateway-sdk",
+    "description": "一个支持在 Swoole 或其它非 Workerman 环境，开发 Gateway Worker 的组件。",
     "require": {
         "php": ">=7.1",
         "workerman/gateway-worker": "^3.0"
@@ -11,7 +12,10 @@
     },
     "autoload": {
         "psr-4": {
-            "Workerman\\Gateway\\Client\\": "src/"
+            "Workerman\\Gateway\\": "src/"
         }
+    },
+    "scripts": {
+        "test": "./vendor/bin/phpunit -c ./tests/phpunit.xml"
     }
 }

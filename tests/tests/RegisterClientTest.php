@@ -1,8 +1,8 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
-use Workerman\Gateway\Client\Register\Contract\IRegisterClient;
-use Workerman\Gateway\Client\Register\RegisterClient;
+use Workerman\Gateway\Register\Contract\IRegisterClient;
+use Workerman\Gateway\Register\RegisterClient;
 
 class RegisterClientTest extends TestCase
 {
