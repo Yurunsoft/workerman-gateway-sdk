@@ -25,5 +25,7 @@ interface IRegisterClient
 
     public function recv(?float $timeout = null): array;
 
+    public function ping(): void;
+
     public function getAllGatewayAddresses(): array;
 }

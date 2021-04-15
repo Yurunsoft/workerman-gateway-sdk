@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Workerman\Gateway\Client\Config;
 
+use Workerman\Gateway\Client\Gateway\GatewayClient;
+use Workerman\Gateway\Client\Register\RegisterClient;
 use Workerman\Gateway\Client\Socket\StreamSocket;
 
 class GatewayClientConfig extends SocketConfig
@@ -21,6 +23,16 @@ class GatewayClientConfig extends SocketConfig
     /**
      * @var string
      */
+    protected $register = RegisterClient::class;
+
+    /**
+     * @var string
+     */
+    protected $client = GatewayClient::class;
+
+    /**
+     * @var string
+     */
     protected $socket = StreamSocket::class;
 
     public function getSecretKey(): string
@@ -31,6 +43,30 @@ class GatewayClientConfig extends SocketConfig
     public function setSecretKey(string $secretKey): self
     {
         $this->secretKey = $secretKey;
+
+        return $this;
+    }
+
+    public function getRegister(): string
+    {
+        return $this->register;
+    }
+
+    public function setRegister(string $register): self
+    {
+        $this->register = $register;
+
+        return $this;
+    }
+
+    public function getClient(): string
+    {
+        return $this->client;
+    }
+
+    public function setClient(string $client): self
+    {
+        $this->client = $client;
 
         return $this;
     }

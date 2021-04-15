@@ -75,14 +75,19 @@ class RegisterClient implements IRegisterClient
         $data['event'] = $event;
         $data['secret_key'] = $this->config->getSecretKey();
 
-        return $this->socket->send(json_encode($data) . "\n", $timeout);
+        return $this->socket->send(json_encode($data) . "\n", $timeout ?? $this->config->getSendTimeout());
     }
 
     public function recv(?float $timeout = null): array
     {
-        $data = $this->socket->recvLine(null, $timeout);
+        $data = $this->socket->recvLine(null, $timeout ?? $this->config->getRecvTimeout());
 
         return json_decode($data, true);
+    }
+
+    public function ping(): void
+    {
+        $this->send('ping');
     }
 
     public function getAllGatewayAddresses(): array
