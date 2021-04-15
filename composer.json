@@ -1,5 +1,7 @@
 {
     "name": "yurunsoft/workerman-gateway-sdk",
+    "type": "library",
+    "license": "MIT",
     "description": "一个支持在 Swoole 或其它非 Workerman 环境，开发 Gateway Worker 的组件。",
     "require": {
         "php": ">=7.1",
