@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Workerman\Gateway\Config;
 
-class SocketConfig
+use longlang\phpkafka\Config\AbstractConfig;
+
+class SocketConfig extends AbstractConfig
 {
     /**
      * @var int
