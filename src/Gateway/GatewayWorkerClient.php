@@ -6,6 +6,7 @@ namespace Workerman\Gateway\Gateway;
 
 use GatewayWorker\Protocols\GatewayProtocol;
 use Workerman\Gateway\Config\GatewayWorkerConfig;
+use Workerman\Gateway\Config\RegisterClientConfig;
 use Workerman\Gateway\Exception\ConnectionException;
 use Workerman\Gateway\Gateway\Contract\IGatewayClient;
 use Workerman\Gateway\Register\Contract\IRegisterClient;
@@ -23,9 +24,9 @@ class GatewayWorkerClient
     protected $config;
 
     /**
-     * @var IRegisterClient[]
+     * @var IRegisterClient|null
      */
-    protected $registerClients = [];
+    protected $registerClient;
 
     /**
      * @var IGatewayClient[]
@@ -46,6 +47,16 @@ class GatewayWorkerClient
      * @var float
      */
     protected $lastPingTime = 0;
+
+    /**
+     * @var int
+     */
+    protected $gatewayLastRetryConnectTime = 0;
+
+    /**
+     * @var int
+     */
+    protected $registerLastRetryConnectTime = 0;
 
     /**
      * @var callable|null
@@ -71,30 +82,6 @@ class GatewayWorkerClient
     public function getConfig(): GatewayWorkerConfig
     {
         return $this->config;
-    }
-
-    protected function connectRegisters(): void
-    {
-        $config = $this->config;
-        $class = $config->getRegister();
-        foreach ($config->getRegisterAddress() as $address)
-        {
-            [$host, $port] = explode(':', $address, 2);
-            /** @var IRegisterClient $client */
-            $client = $this->registerClients[$address] = new $class($host, (int) $port);
-            try
-            {
-                $client->connect();
-                $client->workerConnect();
-            }
-            catch (ConnectionException $ce)
-            {
-            }
-            catch (\Throwable $th)
-            {
-                $this->onException($th);
-            }
-        }
     }
 
     protected function onRegisterMessage(IRegisterClient $client, array $message): void
@@ -160,37 +147,60 @@ class GatewayWorkerClient
         }
     }
 
-    protected function recvRegisterClient(): void
+    protected function recvRegisterClient(): int
     {
-        foreach ($this->registerClients as $client)
+        $success = 0;
+        $config = $this->config;
+        if (null === $this->registerClient)
         {
-            try
-            {
-                if (!$client->isConnected())
-                {
-                    $client->connect();
-                    $client->workerConnect();
-                }
-                $result = null;
-                if ($client->isReceiveable(0.001, $result))
-                {
-                    $message = $client->recv();
-                    $this->onRegisterMessage($client, $message);
-                }
-                elseif (false === $result)
-                {
-                    $client->close();
-                    $client->connect();
-                }
-            }
-            catch (ConnectionException $ce)
-            {
-            }
-            catch (\Throwable $th)
-            {
-                $this->onException($th);
-            }
+            $className = $config->getRegister();
+            $registerClientConfig = new RegisterClientConfig();
+            $registerClientConfig->setSecretKey($config->getSecretKey());
+            $registerClientConfig->setSocket($config->getSocket());
+            $registerAddress = $config->getRegisterAddress();
+            [$host, $port] = explode(':', $registerAddress[array_rand($registerAddress)], 2);
+            /** @var IRegisterClient $client */
+            $client = $this->registerClient = new $className($host, (int) $port, $registerClientConfig);
         }
+        else
+        {
+            $client = $this->registerClient;
+        }
+        try
+        {
+            if (!$client->isConnected())
+            {
+                $time = time();
+                if ($time - $this->registerLastRetryConnectTime < $config->getReconnectInterval())
+                {
+                    return $success;
+                }
+                $this->registerLastRetryConnectTime = $time;
+                $client->connect();
+                $client->workerConnect();
+            }
+            $result = null;
+            if ($client->isReceiveable(0.001, $result))
+            {
+                $message = $client->recv();
+                $this->onRegisterMessage($client, $message);
+            }
+            elseif (false === $result)
+            {
+                $client->close();
+            }
+            ++$success;
+        }
+        catch (ConnectionException $ce)
+        {
+            $this->registerClient = null;
+        }
+        catch (\Throwable $th)
+        {
+            $this->onException($th);
+        }
+
+        return $success;
     }
 
     protected function onGatewayMessage(IGatewayClient $client, array $message): void
@@ -201,14 +211,22 @@ class GatewayWorkerClient
         }
     }
 
-    protected function recvGatewayClients(): void
+    protected function recvGatewayClients(): int
     {
+        $success = 0;
+        $config = $this->config;
         foreach ($this->gatewayClients as $client)
         {
             try
             {
                 if (!$client->isConnected())
                 {
+                    $time = time();
+                    if ($time - $this->gatewayLastRetryConnectTime < $config->getReconnectInterval())
+                    {
+                        continue;
+                    }
+                    $this->gatewayLastRetryConnectTime = $time;
                     $client->connect();
                     $data = GatewayProtocol::$empty;
                     $data['cmd'] = GatewayProtocol::CMD_WORKER_CONNECT;
@@ -223,6 +241,7 @@ class GatewayWorkerClient
                 {
                     $message = $client->recv();
                     $this->onGatewayMessage($client, $message);
+                    ++$success;
                 }
                 elseif (false === $result)
                 {
@@ -238,6 +257,8 @@ class GatewayWorkerClient
                 $this->onException($th);
             }
         }
+
+        return $success;
     }
 
     protected function onException(\Throwable $th): void
@@ -251,24 +272,22 @@ class GatewayWorkerClient
     protected function parsePing(): void
     {
         $time = microtime(true);
-        if ($time - $this->lastPingTime > $this->config->getPingInternal())
+        if ($time - $this->lastPingTime > $this->config->getPingInterval())
         {
-            foreach ($this->registerClients as $client)
+            try
             {
-                try
+                $registerClient = $this->registerClient;
+                if ($registerClient && $registerClient->isConnected())
                 {
-                    if ($client->isConnected())
-                    {
-                        $client->ping();
-                    }
+                    $registerClient->ping();
                 }
-                catch (ConnectionException $ce)
-                {
-                }
-                catch (\Throwable $th)
-                {
-                    $this->onException($th);
-                }
+            }
+            catch (ConnectionException $ce)
+            {
+            }
+            catch (\Throwable $th)
+            {
+                $this->onException($th);
             }
             $this->lastPingTime = $time;
         }
@@ -276,14 +295,14 @@ class GatewayWorkerClient
 
     public function run(): void
     {
-        $this->connectRegisters();
         $this->running = true;
         while ($this->running)
         {
+            $count = 0;
             try
             {
-                $this->recvRegisterClient();
-                $this->recvGatewayClients();
+                $count += $this->recvRegisterClient();
+                $count += $this->recvGatewayClients();
                 $this->parsePing();
             }
             catch (ConnectionException $ce)
@@ -295,6 +314,10 @@ class GatewayWorkerClient
                 {
                     ($this->onException)($th);
                 }
+            }
+            if (0 === $count)
+            {
+                usleep(1000);
             }
         }
     }

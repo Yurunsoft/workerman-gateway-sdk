@@ -7,18 +7,35 @@ namespace Workerman\Gateway\Config;
 class GatewayWorkerConfig extends GatewayClientConfig
 {
     /**
-     * @var float
+     * @var int
      */
-    protected $pingInternal = 25;
+    protected $pingInterval = 25;
 
-    public function getPingInternal(): float
+    /**
+     * @var int
+     */
+    protected $reconnectInterval = 3;
+
+    public function getPingInterval(): int
     {
-        return $this->pingInternal;
+        return $this->pingInterval;
     }
 
-    public function setPingInternal(float $pingInternal): self
+    public function setPingInterval(int $pingInterval): self
     {
-        $this->pingInternal = $pingInternal;
+        $this->pingInterval = $pingInterval;
+
+        return $this;
+    }
+
+    public function getReconnectInterval(): int
+    {
+        return $this->reconnectInterval;
+    }
+
+    public function setReconnectInterval(int $reconnectInterval): self
+    {
+        $this->reconnectInterval = $reconnectInterval;
 
         return $this;
     }
