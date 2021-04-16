@@ -1,16 +1,3 @@
-# Workerman Gateway SDK
-
-一个支持在 Swoole 或其它非 Workerman 环境，开发 Gateway Worker 的组件。
-
-支持用 Workerman Gateway 做网关，Swoole 编写业务代码。
-
-## 安装
-
-`composer require yurunsoft/workerman-gateway-sdk`
-
-## Swoole Demo
-
-```php
 <?php
 
 declare(strict_types=1);
@@ -77,4 +64,3 @@ Co\run(function () {
         $client->run();
     });
 });
-```
